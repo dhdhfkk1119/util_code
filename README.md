@@ -57,6 +57,20 @@ spring:
 ### Session 방식 로그인 전역 model로 설정 하는 방법
 (로그인 시 전역 Controller 등록해서 어디서나 model로 가져올 수 있음)
 
+### 비밀번호 암호화 하기 
+- 의존성 추가 : `	implementation 'org.springframework.security:spring-security-crypto'`
+- MVC 파일 생성후 `@Configuration` 추가 -> @Bean 객체로 암호화 파일 등록
+```
+@Configuration
+public class WebMVConfig {
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
 ### JWT 토큰 방식
 (JWT 이면서 SessionUser로 전역으로 관리함)
 
