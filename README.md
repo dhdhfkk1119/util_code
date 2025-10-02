@@ -67,3 +67,21 @@ spring:
 ### Response ApiUtil 설정 (CSR 방식일 경우)
 
 ### 시간 Format 설정
+- 의존성 추가 : `implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.10'`
+- LocalDateTime , Timestamp 두개다 포맷 가능
+```
+    public static String localDateTimeFormat(LocalDateTime dateTime) {
+        if (dateTime == null) return null;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH시 mm분");
+        return dateTime.format(formatter);
+    }
+
+    public static String dateTimeFormat(Timestamp endDate) {
+        if (endDate == null) {
+            return "";
+        }
+
+        LocalDateTime localDateTime = endDate.toLocalDateTime();
+        return localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
+    }
+```
