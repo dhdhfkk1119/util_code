@@ -62,7 +62,19 @@ upload:
 ---
 
 ## 이미지 업로드 Multipart 방식 사용법
-- yml 파일 저장 위치를 추가 
+- yml 에 추가한 코드를 `@ConfigurationProperties` 설정 실제 경로
+```
+@Configuration
+@ConfigurationProperties(prefix = "upload")
+@Data
+public class UploadProperties {
+    private String memberDir;
+    private String communityDir;
+    private String rootDir;
+}
+
+```
+
 - 다중 이미지 업로드 Multipart[] 배열일 경우 
 - 단일 이미지 업로드 Multipart
 
