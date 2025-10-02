@@ -38,6 +38,28 @@ spring:
       generate-ddl: true # jpa 스키마 자동 생성 기능 
 ```
 
+- 이미지 업로드에 로컬 파일에 저장
+```
+server:
+  servlet:
+    tomcat:
+      max-part-count: 20
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+    encoding:
+      charset: utf-8
+      force: true
+  port: 8080
+
+upload:
+  root-dir: ./uploads/
+  member-dir: member-images/
+  community-dir: community-images/
+
+```
+
+
 ### 이미지 업로드 Multipart 방식 사용법
 - yml 파일 저장 위치를 추가 
 - 다중 이미지 업로드 Multipart[] 배열일 경우 
