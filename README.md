@@ -59,11 +59,14 @@ upload:
 
 ```
 
+---
 
-### 이미지 업로드 Multipart 방식 사용법
+## 이미지 업로드 Multipart 방식 사용법
 - yml 파일 저장 위치를 추가 
 - 다중 이미지 업로드 Multipart[] 배열일 경우 
 - 단일 이미지 업로드 Multipart
+
+---
 
 ### Exception 예외 처리 방식 설정 
 - 400,401,403,404,500
@@ -75,8 +78,12 @@ upload:
   **- SQL 에러 , 서버 내부문제**
 - **`GlobalException 설정`** -> 에러 발생시 어떤식으로 보여줄지 설정
 
+---
+
 ### Session 방식 로그인 전역 model로 설정 하는 방법
 (로그인 시 전역 Controller 등록해서 어디서나 model로 가져올 수 있음)
+
+---
 
 ### 비밀번호 암호화 하기 
 - 의존성 추가 : `	implementation 'org.springframework.security:spring-security-crypto'`
@@ -92,14 +99,24 @@ public class WebMVConfig {
 }
 ```
 
+---
+
 ### JWT 토큰 방식
 (JWT 이면서 SessionUser로 전역으로 관리함)
 
+---
+
 ### 로그인 인터셉터 설정 
+
+---
 
 ### 페이징 하는 법(SSR 방식) -> 이는 코드는 없음 
 
+---
+
 ### Response ApiUtil 설정 (CSR 방식일 경우)
+
+---
 
 ### 시간 Format 설정
 - 의존성 추가 : `implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.10'`
