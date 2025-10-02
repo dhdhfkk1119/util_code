@@ -12,7 +12,6 @@ spring:
     username: {이름}
     password: {비밀번호}
 ```
-- 
 - h2-console 방식
 ```
 spring:
