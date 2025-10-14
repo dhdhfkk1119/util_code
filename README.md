@@ -117,15 +117,17 @@ public class passConfig {
 
 ### JWT 토큰 방식
 - jjwt 의존성 라이브러리 사용 코드 jjwt 파일 안에 있음
+  ```
   	// 1. jjwt-api: Jwts, Claims 등 핵심 API
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 	// 2. jjwt-impl: 실제 구현체
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
 	// 3. jjwt-jackson: JSON 파서
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+  ```
 
 - auth0 의존성 라이브러리 사용 코드 auto0_jwt 안에 있음
-  (implementation group: 'com.auth0', name: 'java-jwt', version: '4.4.0')
+  `implementation group: 'com.auth0', name: 'java-jwt', version: '4.4.0'`
 ---
 
 ### 로그인 인터셉터 설정 
