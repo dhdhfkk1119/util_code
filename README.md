@@ -34,6 +34,8 @@ spring:
     defer-datasource-initialization: true
     show-sql: true # DB에 수행하는 모든 쿼리문을 콘솔에 출력
     hibernate:
+      format_sql: true # SQL 쿼리를 보기 좋게 줄바꿈하여 포맷팅
+      default_batch_fetch_size: 10 # 조인 페치 와 같이 한방 쿼리를 내보냄 
       ddl-auto: update # 개발 초기에 설정 -> update 기존에 있던 데이터는 가만히 두고 변경되는 데이터만 추가 
       generate-ddl: true # jpa 스키마 자동 생성 기능 
 ```
