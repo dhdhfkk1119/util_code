@@ -82,7 +82,7 @@ public class UploadProperties {
 
 ---
 
-### Exception 예외 처리 방식 설정 
+### Exception 예외 처리 방식 설정 , CSR , SSR 방식 두가지 있음 
 - 400,401,403,404,500
 - 400 : 잘못된 파라미터 값 전송 또는 JSON 형식이 틀림 ,요청 헤더 부족
 - 401 : 인증을 하지 않은 요청 거부 , JWT , Session 누락
@@ -96,7 +96,7 @@ public class UploadProperties {
 
 ### Session 방식 로그인 전역 model로 설정 하는 방법
 (로그인 시 전역 Controller 등록해서 어디서나 model로 가져올 수 있음)
-
+- session 파일 안에 있음 
 ---
 
 ### 비밀번호 암호화 하기 
@@ -104,7 +104,7 @@ public class UploadProperties {
 - MVC 파일 생성후 `@Configuration` 추가 -> @Bean 객체로 암호화 파일 등록
 ```
 @Configuration
-public class WebMVConfig {
+public class passConfig {
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder(){
@@ -129,7 +129,45 @@ public class WebMVConfig {
 ---
 
 ### Response ApiUtil 설정 (CSR 방식일 경우)
+- 에러 및 성공 했을 때 해당 객체만 던저주는 것과 해당 객체와 메세지를던져주는것 두가지 버전 임
 
+```
+@Data
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class CommonResponseDto<T> {
+    private boolean success;
+    private T data;
+    private String message;
+
+    // 정적 팩토리 메서드(팩토리 패턴과 다른 개념)
+    // static 객체 속성이 아니라 클래스에 포함 - className.add();
+    public static <T> CommonResponseDto<T> success(T data, String message){
+        return  new CommonResponseDto<>(true,data,message);
+    }
+
+    public static <T> CommonResponseDto<T> success(T data){
+        return success(data,null);
+    }
+
+    public static <T> CommonResponseDto<T> error(String message){
+        return  new CommonResponseDto<>(false,null,message);
+    }
+
+    /*
+    * 클라이언트 코드(Controller)로 부터 객체 생성 과정을 완전히 분리하고 숨기는 것이 목표이다
+    * 이는 주로 OCP 개발-폐쇄 원칙 를 만족시키는 코드이다 
+    * */
+}
+```
+- 아래와 같이 사용
+```
+@PutMapping("/{issueId}")
+    public ResponseEntity<CommonResponseDto<IssueResponse.FindById>> updateIssue(@PathVariable("issueId") Long issuedId,
+                                                                @RequestBody IssueRequest.Update update){
+        Issue issue = issueService.updateIssue(issuedId,update);
+        return ResponseEntity.ok(CommonResponseDto.success(new IssueResponse.FindById(issue),"성공적으로 변경되었습니다"));
+    }
+```
 ---
 
 ### 시간 Format 설정
