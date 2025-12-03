@@ -210,31 +210,69 @@ public class WebMvcConfig implements WebMvcConfigurer {
 - 에러 및 성공 했을 때 해당 객체만 던저주는 것과 해당 객체와 메세지를던져주는것 두가지 버전 임
 
 ```
-@Data
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class CommonResponseDto<T> {
-    private boolean success;
-    private T data;
-    private String message;
+public class ApiUtil<T> {
 
-    // 정적 팩토리 메서드(팩토리 패턴과 다른 개념)
-    // static 객체 속성이 아니라 클래스에 포함 - className.add();
-    public static <T> CommonResponseDto<T> success(T data, String message){
-        return  new CommonResponseDto<>(true,data,message);
+    // 성공 응답을 생성하는 정적 메서드
+    public static <T> ApiResult<T> success(T response) {
+        return new ApiResult<>(true, response, null);
     }
 
-    public static <T> CommonResponseDto<T> success(T data){
-        return success(data,null);
+    // 실패 응답을 생성하는 정적 메서드 (메시지와 상태 코드만 포함)
+    public static <T> ApiResult<T> fail(String errorMessage, HttpStatus status) {
+        return new ApiResult<>(false, null, new ApiError(errorMessage, status.value()));
     }
 
-    public static <T> CommonResponseDto<T> error(String message){
-        return  new CommonResponseDto<>(false,null,message);
+    // 실패 응답을 생성하는 정적 메서드 (메시지, 상태 코드, 에러 코드 포함)
+    public static <T> ApiResult<T> fail(String errorMessage, HttpStatus status, String errorCode) {
+        return new ApiResult<>(false, null, new ApiError(errorMessage, status.value(), errorCode));
     }
 
-    /*
-    * 클라이언트 코드(Controller)로 부터 객체 생성 과정을 완전히 분리하고 숨기는 것이 목표이다
-    * 이는 주로 OCP 개발-폐쇄 원칙 를 만족시키는 코드이다 
-    * */
+    // 실패 응답을 생성하는 정적 메서드 (유효성 검사 오류 포함)
+    public static <T> ApiResult<T> fail(String errorMessage, HttpStatus status, String errorCode, Map<String, String> validationErrors) {
+        return new ApiResult<>(false, null, new ApiError(errorMessage, status.value(), errorCode, validationErrors));
+    }
+
+    @Data
+    public static class ApiResult<T> {
+        private final boolean success;
+        private final T response;
+        private final ApiError error;
+
+        private ApiResult(boolean success, T response, ApiError error) {
+            this.success = success;
+            this.response = response;
+            this.error = error;
+        }
+    }
+
+    @Data
+    public static class ApiError {
+        private final String message;
+        private final int status;
+        @JsonInclude(JsonInclude.Include.NON_NULL) // code가 null이면 JSON에서 제외
+        private final String code;
+        @JsonInclude(JsonInclude.Include.NON_NULL) // validationErrors가 null이면 JSON에서 제외
+        private final Map<String, String> validationErrors;
+
+        // 기존 생성자
+        private ApiError(String message, int status) {
+            this(message, status, null, null);
+        }
+
+        // 에러 코드를 받는 새로운 생성자
+        private ApiError(String message, int status, String code) {
+            this(message, status, code, null);
+        }
+
+        // 유효성 검사 오류를 포함하는 최종 생성자
+        private ApiError(String message, int status, String code, Map<String, String> validationErrors) {
+            this.message = message;
+            this.status = status;
+            this.code = code;
+            this.validationErrors = validationErrors;
+        }
+    }
+
 }
 ```
 - 아래와 같이 사용
@@ -266,4 +304,190 @@ public class CommonResponseDto<T> {
         LocalDateTime localDateTime = endDate.toLocalDateTime();
         return localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
     }
+```
+### JJWT 토큰 방식 토큰 만들기
+```
+package com.nationwide.nationwide_server.core.jwt;
+
+import com.nationwide.nationwide_server.member.Member;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+@Slf4j
+public class JwtTokenProvider {
+    private SecretKey key = Jwts.SIG.HS256.key().build(); // 대칭키 생성
+    private final long accessExpirationMs; // 일반 토큰 유효 시간 1시간
+    private final long refreshExpirationMs; // 새 토큰 유효 시간 70일
+
+
+    public JwtTokenProvider(
+            @Value("${jwt.access-expiration-ms}") long accessExpirationMs,
+            @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs
+    ) {
+        this.accessExpirationMs = accessExpirationMs;
+        this.refreshExpirationMs = refreshExpirationMs;
+    }
+
+    // Access Token 생성
+    public String createAccessToken(Member member) {
+        log.debug("Access Token 생성 시작 - 사용자: {}", member.getLoginId());
+        return createToken(member, accessExpirationMs);
+    }
+
+    // Refresh Token 생성
+    public String createRefreshToken(Member member) {
+        log.debug("Refresh Token 생성 시작 - 사용자: {}", member.getLoginId());
+        return createToken(member, refreshExpirationMs);
+    }
+
+    // 토큰 생성 공통 로직
+    private String createToken(Member member, long expirationMs) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", member.getId());
+        claims.put("name", member.getName());
+        claims.put("profileImage", member.getProfileImage());
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
+
+        String token = Jwts.builder()
+                .subject(member.getLoginId())
+                .claims(claims)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(key)
+                .compact();
+
+        log.info("토큰 생성 완료 - 사용자: {}, 만료시간: {}", member.getLoginId(), expiry);
+        return token;
+    }
+
+    // 토큰 검증 하기
+    public boolean validateToken(String token){
+        try {
+            Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token);
+            return true;
+        } catch (SecurityException | MalformedJwtException e) {
+            log.error("잘못된 JWT 서명입니다.", e);
+        } catch (ExpiredJwtException e) {
+            log.error("만료된 JWT 토큰입니다.");
+        } catch (UnsupportedJwtException e) {
+            log.error("지원되지 않는 JWT 토큰입니다.");
+        } catch (Exception e) {
+            log.error("JWT 토큰이 잘못되었습니다.");
+        }
+        return false;
+    }
+
+    // 생성한 토큰 추출
+    public Member getClaimsMember(String token) {
+        log.debug("토큰에서 회원 정보 추출 시작");
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            // Claims에서 개별 필드를 꺼내서 Member 객체 생성
+            Member member = new Member();
+            member.setId(claims.get("id", Long.class));
+            member.setLoginId(claims.getSubject());
+            member.setName(claims.get("name", String.class));
+            member.setProfileImage(claims.get("profileImage", String.class));
+
+            log.debug("회원 정보 추출 완료 - ID: {}", member.getId());
+            return member;
+
+        } catch (ExpiredJwtException e) {
+            log.warn("만료된 토큰에서 정보 추출 시도");
+            // 만료된 토큰이라도 Claims는 추출 가능
+            Claims claims = e.getClaims();
+
+            Member member = new Member();
+            member.setId(claims.get("id", Long.class));
+            member.setLoginId(claims.getSubject());
+            member.setName(claims.get("name", String.class));
+            member.setProfileImage(claims.get("profileImage", String.class));
+
+            return member;
+
+        } catch (Exception e) {
+            log.error("토큰에서 회원 정보 추출 실패", e);
+            return null;
+        }
+    }
+
+    // 유저 loginId 가져오기
+    public String getLoginId(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return claims.getSubject();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getSubject();
+        } catch (Exception e) {
+            log.error("LoginId 추출 실패", e);
+            return null;
+        }
+    }
+
+}
+```
+- JwtInterceptor 
+```
+@Component
+@RequiredArgsConstructor
+public class JwtInterceptor implements HandlerInterceptor {
+
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+
+        String token = resolveToken(request);
+        if(token != null && jwtTokenProvider.validateToken(token)){
+
+            Member member = jwtTokenProvider.getClaimsMember(token);
+
+            SessionUser sessionUser = new SessionUser(
+                    member.getId(),
+                    member.getLoginId(),
+                    member.getName(),
+                    member.getProfileImage()
+            );
+
+            request.setAttribute("sessionUser", sessionUser);
+            return true;
+        }
+
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 토큰입니다");
+        return false;
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        // 토큰 검증 및 "Bearer " (공백 한칸을 잘라내자)
+        if(StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+}
 ```
