@@ -152,24 +152,39 @@ public class WebMvcConfig implements WebMvcConfigurer {
 ### WebMvc CorsMappings 설정 하기
 - Cors 설정하기 , methods 각각 설정 
 ```
- @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api-test/**")
-                //.allowedOrigins("https://api.kakao.com:8080") 특정 도메인만 등록 가능
-                .allowedOrigins("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE")
-                .allowedHeaders("*")
-                .allowCredentials(false); // 인증이 필요한 경우 true
+@Configuration
+@RequiredArgsConstructor
+public class MVConfig implements WebMvcConfigurer {
 
-        // 필요하다면 중복 등록 가능
+
+    private final JwtInterceptor jwtInterceptor;
+
+    // 비밀번호 암호화 등록
+    @Bean
+    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("*")
-                .allowedMethods("*")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
+                .exposedHeaders("Authorization")
                 .allowCredentials(false)
                 .maxAge(3600);
-
     }
+
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(jwtInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/**");
+    }
+}
+
 ```
 
 ---
